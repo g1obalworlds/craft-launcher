@@ -288,16 +288,17 @@ impl LauncherUi {
             let stale = stale_pick(&self.settings.preferred_kinds, &offered);
             // A saved pick this system can't install is shown as what will really be used.
             let mut choice = self.settings.preferred_kinds.first().copied().filter(|k| offered.contains(k)).or(offered.first().copied());
-            let before = choice;
+            let mut picked = false;
             row(ui, tl!("Install new apps as"), 210.0, &mut |ui| {
                 let label = choice.map_or("", |k| crate::i18n::t(k.label()));
                 egui::ComboBox::from_id_salt("kind").selected_text(label).width(210.0).show_ui(ui, |ui| {
                     for k in &offered {
-                        ui.selectable_value(&mut choice, Some(*k), crate::i18n::t(k.label()));
+                        // A click saves even when it picks the format already shown (the stale pick's fallback).
+                        picked |= ui.selectable_value(&mut choice, Some(*k), crate::i18n::t(k.label())).clicked();
                     }
                 });
             });
-            if choice != before {
+            if picked {
                 self.settings.preferred_kinds = choice.into_iter().collect();
             } else if let (Some(bad), Some(used)) = (stale, choice) {
                 let note = fmt(
